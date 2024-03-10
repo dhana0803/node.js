@@ -1,27 +1,37 @@
 pipeline {
     agent any
+    
+    environment {
+        // Define the Docker image name here for reuse
+        IMAGE_NAME = 'rushikagaraga08/nodeapp'
+    }
+
     stages {
-        stage('git clone') {
+        stage('Checkout Source') {
             steps {
-                script {
-                    echo cloning git repo for app base
-                    git clone https://github.com/dhana0803/node.js
-                    ls
-                    cd node.js
-                }
+                // Properly checkout your Git repository
+                checkout scm: [$class: 'GitSCM', userRemoteConfigs: [[url: 'https://github.com/dhana0803/node.js']]]
             }
         }
+        
         stage('Build Docker Image') {
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'docker-hub') {
-                        echo builing the dockerfile
-                        docker build -d -t nodeapp:latest
-                        echo pushing the docker image to docker hub
-                        docker push    
+                    // Building the Docker image with the Docker Pipeline plugin syntax
+                    docker.build("${env.IMAGE_NAME}:latest")
+                }
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Login and push the Docker image to Docker Hub
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
+                        docker.image("${env.IMAGE_NAME}:latest").push()
+                    }
                 }
             }
         }
     }
-}
 }
